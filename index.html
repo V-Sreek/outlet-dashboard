@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wizlearn Q3 2026 quarter dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#1B2B3A;background:#F7FAFD;font-size:14px;line-height:1.45}
+[hidden]{display:none!important}
+header{background:#FFFFFF;border-bottom:1px solid #DCEAF5;padding:28px 40px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+header h1{margin:0;color:#123A5C;font-size:26px}
+header p{margin:6px 0 0;color:#4F6A80}
+#who{color:#4F6A80;font-size:13px;margin-top:6px}
+main{padding:28px 40px 48px;max-width:1280px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kpi{background:#FFFFFF;border:1px solid #DCEAF5;border-radius:12px;padding:18px 20px}
+.kpi-label{color:#4F6A80;font-size:13px;text-transform:uppercase;letter-spacing:1px}
+.kpi-value{color:#123A5C;font-size:30px;font-weight:bold;margin-top:6px}
+.kpi-sub{color:#4F6A80;margin-top:4px}
+.kpi-note{color:#9A3B2E;margin-top:6px;font-weight:bold}
+section{margin-top:32px;background:#FFFFFF;border:1px solid #DCEAF5;border-radius:12px;padding:24px 26px}
+section h2{margin:0 0 4px;color:#123A5C;font-size:20px}
+.source{color:#4F6A80;font-size:12px;margin-bottom:16px}
+.months{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.month-name{font-weight:bold;color:#123A5C;margin-bottom:8px}
+.bar-row{display:grid;grid-template-columns:130px 1fr 110px;gap:10px;align-items:center;margin:6px 0}
+.bar-label{color:#4F6A80;font-size:13px}
+.bar-track{background:#EEF5FB;border-radius:6px;height:14px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px}
+.bar-val{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+.bar-row.wide{grid-template-columns:230px 1fr 90px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;background:#DCEAF5;color:#123A5C;padding:8px 10px}
+td{padding:7px 10px;border-bottom:1px solid #EEF5FB;vertical-align:middle}
+ul.watch{margin:0;padding-left:20px}
+ul.watch li{margin:0 0 8px}
+.note{color:#4F6A80;font-size:12px;margin-top:12px}
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:8px 0 16px}
+.controls label{display:flex;flex-direction:column;font-size:12px;color:#4F6A80;gap:4px}
+input,select,button{font:inherit}
+input[type=text],input[type=number],input[type=email],input[type=password],input[type=month],input[type=date],select{border:1px solid #B9D3E8;border-radius:6px;padding:6px 8px;background:#FFFFFF;color:#1B2B3A}
+td input[type=text]{width:170px}
+td input[type=number]{width:84px}
+td select{max-width:150px}
+.btn{background:#2F6E9E;color:#FFFFFF;border:0;border-radius:6px;padding:7px 14px;cursor:pointer}
+.btn.secondary{background:#FFFFFF;color:#2F6E9E;border:1px solid #2F6E9E}
+.btn.danger{background:#9A3B2E}
+.btn:disabled{opacity:.5;cursor:default}
+.login-wrap{max-width:380px;margin:80px auto;background:#FFFFFF;border:1px solid #DCEAF5;border-radius:12px;padding:28px}
+.login-wrap h2{margin:0 0 16px;color:#123A5C}
+.login-wrap label{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;color:#4F6A80;font-size:13px}
+.err{color:#9A3B2E;font-weight:bold;min-height:1em}
+#status{color:#4F6A80;font-size:13px;margin-top:10px;min-height:1em}
+.unreported li{margin-bottom:6px}
+.ok{color:#2F6E9E}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}.months,.two{grid-template-columns:1fr}main,header{padding-left:18px;padding-right:18px}}
+</style>
+</head>
+<body>
+
+<div id="login" class="login-wrap" hidden>
+  <h2>Sign in</h2>
+  <form id="login-form">
+    <label>Email <input id="email" type="email" required autocomplete="username"></label>
+    <label>Password <input id="password" type="password" required autocomplete="current-password"></label>
+    <button class="btn" type="submit">Sign in</button>
+    <div id="login-error" class="err"></div>
+  </form>
+</div>
+
+<div id="app" hidden>
+<header>
+  <div>
+    <h1>Wizlearn Q3 2026 quarter dashboard</h1>
+    <p>July to September 2026 · Operations runs are read live from the database</p>
+    <div id="who"></div>
+  </div>
+  <button class="btn secondary" id="signout" type="button">Sign out</button>
+</header>
+<main>
+
+  <!-- Live KPIs: coordinator sees own runs, manager sees all -->
+  <div class="kpis" id="live-kpis"></div>
+
+  <!-- Manager only: Not reported this week -->
+  <section id="not-reported-section" hidden>
+    <h2>Not reported this week</h2>
+    <div class="source">Coordinators who have not updated any of their runs in the last 7 days.</div>
+    <ul class="unreported" id="not-reported"></ul>
+  </section>
+
+  <!-- Live runs: filter, chart, editable table -->
+  <section>
+    <h2 id="runs-title">Runs</h2>
+    <div class="source">Source: Supabase table runs. Changes are saved and recorded in run_audit.</div>
+    <div class="controls">
+      <label>Month
+        <select id="filter-month"></select>
+      </label>
+      <label id="filter-coord-wrap">Coordinator
+        <select id="filter-coord"></select>
+      </label>
+    </div>
+    <div id="chart"></div>
+    <div style="overflow-x:auto;margin-top:16px"><table>
+      <thead><tr>
+        <th>Month</th><th id="th-coord">Coordinator</th><th>Runs delivered</th><th>Learners trained</th>
+        <th>Attendance %</th><th>Stage</th><th>Certificates pending</th><th>Note</th><th></th>
+      </tr></thead>
+      <tbody id="runs-body"></tbody>
+    </table></div>
+    <div class="note" id="runs-note"></div>
+    <div id="status"></div>
+
+    <div id="add-run" hidden style="margin-top:20px;border-top:1px solid #DCEAF5;padding-top:16px">
+      <h3 style="margin:0 0 10px;color:#123A5C;font-size:16px">Add a run</h3>
+      <form id="add-form" class="controls">
+        <label>Month <input type="month" id="new-month" required></label>
+        <label>Coordinator <select id="new-coord" required></select></label>
+        <label>Runs delivered <input type="number" id="new-runs" min="0" required></label>
+        <label>Learners trained <input type="number" id="new-learners" min="0" required></label>
+        <label>Attendance % <input type="number" id="new-att" min="0" max="100" step="0.1"></label>
+        <label>Note <input type="text" id="new-note" maxlength="200"></label>
+        <button class="btn" type="submit">Add run</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Original static dashboard, manager only -->
+  <div id="manager-static" hidden>
+  <div class="kpis"><div class="kpi"><div class="kpi-label">Total revenue, Q3</div><div class="kpi-value">S$933,000</div><div class="kpi-sub">Target S$965,000 · Q2 S$920,500</div><div class=kpi-note>Revenue below target</div></div><div class="kpi"><div class="kpi-label">Operating profit, Q3</div><div class="kpi-value">S$162,400</div><div class="kpi-sub">Target S$204,000 · Q2 S$173,400</div><div class=kpi-note>Profit below Q2 and target</div></div><div class="kpi"><div class="kpi-label">Learners trained, Q3</div><div class="kpi-value">1,298</div><div class="kpi-sub">Target 1,350 · Q2 1,240</div></div><div class="kpi"><div class="kpi-label">Enquiries (leads), Q3</div><div class="kpi-value">193</div><div class="kpi-sub">Target 210 · Q2 188</div></div><div class="kpi"><div class="kpi-label">Tickets within SLA, Q3</div><div class="kpi-value">88.3%</div><div class="kpi-sub">Target 95.0% · Q2 94.0%</div><div class=kpi-note>September fell to 78%</div></div><div class="kpi"><div class="kpi-label">Headcount, end Q3</div><div class="kpi-value">118</div><div class="kpi-sub">Target 124 · Q2 118</div></div></div>
+
+  <section>
+    <h2>Watch list</h2>
+    <div class="source">Derived from the figures in the sections below.</div>
+    <ul class="watch"><li>Helpdesk SLA fell to 78.0% in September against a 95% target, while tickets rose from 310 in July to 421.</li><li>Debtors over 60 days reached S$96,300 at September month end, up from S$41,800 in July.</li><li>Training course revenue from nursing homes fell from S$92,000 in Q2 to S$62,500 in Q3.</li><li>Certificates pending over 30 days rose to 19 against a target of 5.</li><li>Average attendance for one coordinator stayed between 79% and 81%, while the others were around 94% to 96%.</li><li>Email unsubscribes jumped to 210 in August, up from 32 in July.</li><li>The Finance &#x27;Cost: other&#x27; line rose to S$18,700 in August, accounting for most of the rise in total costs that month.</li><li>Sales has not yet entered September demos for the Referral channel (Marketing workbook note).</li></ul>
+  </section>
+
+  <section>
+    <h2>Finance</h2>
+    <div class="source">Source: Finance quarter summary.xlsx, sheets Monthly and Training revenue by client</div>
+    <div class="months"><div class="month"><div class="month-name">Jul</div><div class="bar-row"><div class="bar-label">Revenue</div><div class="bar-track"><div class="bar-fill" style="width:100.0%;background:#7FB6DE"></div></div><div class="bar-val">S$316,000</div></div><div class="bar-row"><div class="bar-label">Costs</div><div class="bar-track"><div class="bar-fill" style="width:79.6%;background:#C9DCEB"></div></div><div class="bar-val">S$251,500</div></div><div class="bar-row"><div class="bar-label">Profit</div><div class="bar-track"><div class="bar-fill" style="width:20.4%;background:#2F6E9E"></div></div><div class="bar-val">S$64,500</div></div></div><div class="month"><div class="month-name">Aug</div><div class="bar-row"><div class="bar-label">Revenue</div><div class="bar-track"><div class="bar-fill" style="width:98.4%;background:#7FB6DE"></div></div><div class="bar-val">S$311,000</div></div><div class="bar-row"><div class="bar-label">Costs</div><div class="bar-track"><div class="bar-fill" style="width:84.7%;background:#C9DCEB"></div></div><div class="bar-val">S$267,600</div></div><div class="bar-row"><div class="bar-label">Profit</div><div class="bar-track"><div class="bar-fill" style="width:13.7%;background:#2F6E9E"></div></div><div class="bar-val">S$43,400</div></div></div><div class="month"><div class="month-name">Sep</div><div class="bar-row"><div class="bar-label">Revenue</div><div class="bar-track"><div class="bar-fill" style="width:96.8%;background:#7FB6DE"></div></div><div class="bar-val">S$306,000</div></div><div class="bar-row"><div class="bar-label">Costs</div><div class="bar-track"><div class="bar-fill" style="width:79.6%;background:#C9DCEB"></div></div><div class="bar-val">S$251,500</div></div><div class="bar-row"><div class="bar-label">Profit</div><div class="bar-track"><div class="bar-fill" style="width:17.2%;background:#2F6E9E"></div></div><div class="bar-val">S$54,500</div></div></div></div>
+    <div class="two">
+      <div><table><thead><tr><th>Client type</th><th>Q3 2026 (S$)</th><th>Q2 2026 (S$)</th><th>Change (S$)</th></tr></thead><tbody><tr><td>Community hospitals</td><td>S$114,000</td><td>S$112,000</td><td>S$2,000</td></tr><tr><td>Nursing homes</td><td>S$62,500</td><td>S$92,000</td><td>−S$29,500</td></tr><tr><td>Medical associations</td><td>S$45,500</td><td>S$40,000</td><td>S$5,500</td></tr><tr><td>Healthcare training institutes</td><td>S$33,000</td><td>S$24,000</td><td>S$9,000</td></tr></tbody></table></div>
+      <div><table><thead><tr><th>Measure</th><th>Q3 2026</th><th>Target</th></tr></thead><tbody><tr><td>Total revenue</td><td>S$933,000</td><td>S$965,000</td></tr><tr><td>Total costs</td><td>S$770,600</td><td>S$761,000</td></tr><tr><td>Operating profit</td><td>S$162,400</td><td>S$204,000</td></tr><tr><td>Debtors over 60 days, Sep</td><td>S$96,300</td><td>–</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>People</h2>
+    <div class="source">Source: HR quarter summary.xlsx, sheets Monthly and By department</div>
+    <div class="months"><div class="month"><div class="month-name">Jul</div><div class="bar-row"><div class="bar-label">Headcount end</div><div class="bar-track"><div class="bar-fill" style="width:99.2%;background:#7FB6DE"></div></div><div class="bar-val">120</div></div><div class="bar-row"><div class="bar-label">Leavers</div><div class="bar-track"><div class="bar-fill" style="width:25.0%;background:#2F6E9E"></div></div><div class="bar-val">2</div></div></div><div class="month"><div class="month-name">Aug</div><div class="bar-row"><div class="bar-label">Headcount end</div><div class="bar-track"><div class="bar-fill" style="width:100.0%;background:#7FB6DE"></div></div><div class="bar-val">121</div></div><div class="bar-row"><div class="bar-label">Leavers</div><div class="bar-track"><div class="bar-fill" style="width:25.0%;background:#2F6E9E"></div></div><div class="bar-val">2</div></div></div><div class="month"><div class="month-name">Sep</div><div class="bar-row"><div class="bar-label">Headcount end</div><div class="bar-track"><div class="bar-fill" style="width:97.5%;background:#7FB6DE"></div></div><div class="bar-val">118</div></div><div class="bar-row"><div class="bar-label">Leavers</div><div class="bar-track"><div class="bar-fill" style="width:75.0%;background:#2F6E9E"></div></div><div class="bar-val">6</div></div></div></div>
+    <div class="two">
+      <div><table><thead><tr><th>Department</th><th>Headcount start</th><th>Joiners</th><th>Leavers</th><th>Headcount end</th><th>Sick leave days</th></tr></thead><tbody><tr><td>Product and Engineering</td><td>43</td><td>1</td><td>0</td><td>44</td><td>15</td></tr><tr><td>Customer Success</td><td>23</td><td>1</td><td>2</td><td>22</td><td>10</td></tr><tr><td>Training Delivery</td><td>23</td><td>0</td><td>0</td><td>23</td><td>62</td></tr><tr><td>Sales and Marketing</td><td>17</td><td>0</td><td>0</td><td>17</td><td>6</td></tr><tr><td>Corporate (Finance, HR, Admin)</td><td>14</td><td>1</td><td>0</td><td>15</td><td>4</td></tr></tbody></table>
+        <div class="note">Table shows August 2026, the month with the highest sick leave for Training Delivery (62 days).</div></div>
+      <div><table><thead><tr><th>Measure</th><th>Q3 2026</th><th>Target</th></tr></thead><tbody><tr><td>Headcount, end of Sep</td><td>118</td><td>124</td></tr><tr><td>Leavers, Q3</td><td>10</td><td>–</td></tr><tr><td>Average days to hire</td><td>44.3</td><td>35</td></tr><tr><td>Training hours per staff</td><td>10.1</td><td>12</td></tr><tr><td>Overtime hours</td><td>1,905</td><td>–</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Marketing</h2>
+    <div class="source">Source: Marketing quarter summary.xlsx, sheets Monthly and By channel</div>
+    <div><div class="bar-row"><div class="bar-label">Website visits</div><div class="bar-track"><div class="bar-fill" style="width:100.0%;background:#7FB6DE"></div></div><div class="bar-val">27,700</div></div><div class="bar-row"><div class="bar-label">Enquiries (leads)</div><div class="bar-track"><div class="bar-fill" style="width:0.7%;background:#7FB6DE"></div></div><div class="bar-val">193</div></div><div class="bar-row"><div class="bar-label">Appointments</div><div class="bar-track"><div class="bar-fill" style="width:0.2%;background:#7FB6DE"></div></div><div class="bar-val">48</div></div><div class="bar-row"><div class="bar-label">Demos held</div><div class="bar-track"><div class="bar-fill" style="width:0.1%;background:#7FB6DE"></div></div><div class="bar-val">41</div></div><div class="bar-row"><div class="bar-label">Deals won</div><div class="bar-track"><div class="bar-fill" style="width:0.0%;background:#7FB6DE"></div></div><div class="bar-val">9</div></div></div>
+    <div class="two">
+      <div><table><thead><tr><th>Channel</th><th>Enquiries</th><th>Appointments</th><th>Spend (S$)</th><th>Spend per enquiry</th></tr></thead><tbody><tr><td>Email</td><td>56</td><td>10</td><td>S$2,750</td><td>S$49</td></tr><tr><td>LinkedIn ads</td><td>49</td><td>8</td><td>S$6,400</td><td>S$131</td></tr><tr><td>Website (organic)</td><td>48</td><td>8</td><td>S$0</td><td>No spend</td></tr><tr><td>Webinar</td><td>23</td><td>16</td><td>S$4,300</td><td>S$187</td></tr><tr><td>Referral</td><td>17</td><td>6</td><td>S$0</td><td>No spend</td></tr></tbody></table>
+        <div class="note">Spend per enquiry is calculated from the channel rows. Content, design and events spend is not shown by channel.</div></div>
+      <div><table><thead><tr><th>Measure</th><th>Q3 2026</th><th>Target</th></tr></thead><tbody><tr><td>Website visits</td><td>27,700</td><td>27,000</td></tr><tr><td>Enquiries (leads)</td><td>193</td><td>210</td></tr><tr><td>Appointments</td><td>48</td><td>60</td></tr><tr><td>Demos held</td><td>41</td><td>50</td></tr><tr><td>Deals won from marketing leads</td><td>9</td><td>10</td></tr><tr><td>Marketing spend (S$)</td><td>S$26,500</td><td>S$28,000</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Operations</h2>
+    <div class="source">Source: Operations quarter summary.xlsx, sheets Monthly, By coordinator and Tickets by client type</div>
+    <div class="months"><div class="month"><div class="month-name">Jul</div><div class="bar-row"><div class="bar-label">Helpdesk tickets</div><div class="bar-track"><div class="bar-fill" style="width:73.6%;background:#7FB6DE"></div></div><div class="bar-val">310</div></div><div class="bar-row"><div class="bar-label">Within SLA</div><div class="bar-track"><div class="bar-fill" style="width:94.0%;background:#2F6E9E"></div></div><div class="bar-val">94.0%</div></div></div><div class="month"><div class="month-name">Aug</div><div class="bar-row"><div class="bar-label">Helpdesk tickets</div><div class="bar-track"><div class="bar-fill" style="width:86.0%;background:#7FB6DE"></div></div><div class="bar-val">362</div></div><div class="bar-row"><div class="bar-label">Within SLA</div><div class="bar-track"><div class="bar-fill" style="width:93.0%;background:#2F6E9E"></div></div><div class="bar-val">93.0%</div></div></div><div class="month"><div class="month-name">Sep</div><div class="bar-row"><div class="bar-label">Helpdesk tickets</div><div class="bar-track"><div class="bar-fill" style="width:100.0%;background:#7FB6DE"></div></div><div class="bar-val">421</div></div><div class="bar-row"><div class="bar-label">Within SLA</div><div class="bar-track"><div class="bar-fill" style="width:78.0%;background:#2F6E9E"></div></div><div class="bar-val">78.0%</div></div></div></div>
+    <div class="two">
+      <div><table><thead><tr><th>Coordinator</th><th>Runs (Q3)</th><th>Learners (Q3)</th><th>Average attendance</th></tr></thead><tbody><tr><td>Nurul Huda</td><td>18</td><td>340</td><td>94.7%</td></tr><tr><td>Marcus Tan</td><td>17</td><td>318</td><td>94.3%</td></tr><tr><td>Wei Ling Ong</td><td>17</td><td>318</td><td>80.0%</td></tr><tr><td>Arjun Nair</td><td>17</td><td>306</td><td>95.7%</td></tr></tbody></table></div>
+      <div><table><thead><tr><th>Client type</th><th>Jul tickets</th><th>Aug tickets</th><th>Sep tickets</th><th>Q3 total</th></tr></thead><tbody><tr><td>Community hospitals</td><td>150</td><td>175</td><td>205</td><td>530</td></tr><tr><td>Nursing homes</td><td>70</td><td>82</td><td>96</td><td>248</td></tr><tr><td>Medical associations</td><td>50</td><td>58</td><td>66</td><td>174</td></tr><tr><td>Healthcare training institutes</td><td>40</td><td>47</td><td>54</td><td>141</td></tr></tbody></table></div>
+    </div>
+    <div class="note">Course runs delivered in Q3: 69 against a target of 70. Runs cancelled in Q3: 10.</div>
+  </section>
+
+  </div>
+</main>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://merpmlqiauzuxablpufh.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_J04HjfXZxxDGwDaVoMXysA_VhJrJeNX';
+const sb = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const monthLabel = (d) => new Date(String(d).slice(0, 10) + 'T00:00:00Z').toLocaleString('en', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+const monthKey = (d) => String(d).slice(0, 7);
+
+const state = { profile: null, runs: [], coordinators: [], fm: 'all', fc: 'all' };
+
+function setStatus(msg, ok = false) {
+  const el = $('#status');
+  el.textContent = msg || '';
+  el.className = ok ? 'ok' : '';
+}
+
+function showLogin() {
+  $('#app').hidden = true;
+  $('#login').hidden = false;
+}
+
+sb.auth.onAuthStateChange((_event, session) => {
+  if (session) loadApp(session.user);
+  else { state.profile = null; showLogin(); }
+});
+
+$('#login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('#login-error').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#password').value });
+  if (error) $('#login-error').textContent = 'Sign-in failed. Check your email and password.';
+  $('#password').value = '';
+});
+
+$('#signout').addEventListener('click', () => sb.auth.signOut());
+
+async function loadApp(user) {
+  const { data: profile, error } = await sb.from('account_roles')
+    .select('user_id, full_name, role, coordinator_name').eq('user_id', user.id).maybeSingle();
+  if (error || !profile) {
+    $('#login-error').textContent = 'This account has no dashboard role. Ask the manager to add it.';
+    await sb.auth.signOut();
+    return;
+  }
+  state.profile = profile;
+  $('#login').hidden = true;
+  $('#app').hidden = false;
+  await refresh();
+}
+
+async function refresh() {
+  const { data: runs, error } = await sb.from('runs').select('*').order('period_month').order('coordinator_name');
+  if (error) { setStatus('Could not load runs: ' + error.message); return; }
+  state.runs = runs ?? [];
+  if (state.profile.role === 'manager') {
+    const { data: coords, error: cErr } = await sb.from('account_roles')
+      .select('user_id, full_name, coordinator_name').eq('role', 'coordinator').order('full_name');
+    if (cErr) setStatus('Could not load coordinators: ' + cErr.message);
+    state.coordinators = coords ?? [];
+  }
+  render();
+}
+
+function visibleRuns() {
+  return state.runs.filter((r) =>
+    (state.fm === 'all' || monthKey(r.period_month) === state.fm) &&
+    (state.fc === 'all' || r.coordinator_name === state.fc));
+}
+
+function notReported() {
+  const since = Date.now() - 7 * 24 * 3600 * 1000;
+  return state.coordinators.filter((c) =>
+    !state.runs.some((r) => r.coordinator_name === c.coordinator_name &&
+      r.updated_by === c.user_id && new Date(r.updated_at).getTime() >= since));
+}
+
+function render() {
+  const p = state.profile;
+  const isMgr = p.role === 'manager';
+  $('#who').textContent = `${p.full_name} · ${isMgr ? 'Manager' : 'Coordinator (' + p.coordinator_name + ')'}`;
+  $('#manager-static').hidden = !isMgr;
+  $('#not-reported-section').hidden = !isMgr;
+  $('#add-run').hidden = !isMgr;
+  $('#filter-coord-wrap').hidden = !isMgr;
+  $('#th-coord').hidden = !isMgr;
+  $('#runs-title').textContent = isMgr ? 'Runs by coordinator' : 'My runs';
+  $('#runs-note').textContent = isMgr
+    ? 'Learners trained and attendance are the coordinator figures as imported. The September coordinator rows total 16 learners below the workbook total of 436.'
+    : 'You can edit stage, learners trained, attendance, certificates pending and note. Other fields are set by the manager.';
+
+  renderFilters();
+  renderKpis();
+  if (isMgr) renderNotReported();
+  renderChart();
+  renderTable();
+}
+
+function renderFilters() {
+  const months = [...new Set(state.runs.map((r) => monthKey(r.period_month)))].sort();
+  const mSel = $('#filter-month');
+  mSel.innerHTML = '<option value="all">All months</option>' +
+    months.map((m) => `<option value="${esc(m)}">${esc(monthLabel(m + '-01'))}</option>`).join('');
+  mSel.value = state.fm;
+
+  const coords = [...new Set(state.runs.map((r) => r.coordinator_name))].sort();
+  const cSel = $('#filter-coord');
+  cSel.innerHTML = '<option value="all">All coordinators</option>' +
+    coords.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  cSel.value = state.fc;
+
+  const newCoord = $('#new-coord');
+  newCoord.innerHTML = state.coordinators.map((c) =>
+    `<option value="${esc(c.coordinator_name)}">${esc(c.coordinator_name)}</option>`).join('');
+}
+
+function renderKpis() {
+  const rows = visibleRuns();
+  const runs = rows.reduce((s, r) => s + (r.runs_delivered || 0), 0);
+  const learners = rows.reduce((s, r) => s + (r.learners_trained || 0), 0);
+  const att = rows.filter((r) => r.attendance_rate != null);
+  const avgAtt = att.length ? (att.reduce((s, r) => s + Number(r.attendance_rate), 0) / att.length * 100).toFixed(1) + '%' : '–';
+  const certs = rows.reduce((s, r) => s + (r.certificates_pending || 0), 0);
+  const isMgr = state.profile.role === 'manager';
+
+  const kpi = (label, value, sub = '') => `<div class="kpi"><div class="kpi-label">${esc(label)}</div><div class="kpi-value">${esc(value)}</div><div class="kpi-sub">${esc(sub)}</div></div>`;
+  let html = kpi('Runs delivered', runs, 'Selected filter') +
+    kpi('Learners trained', learners.toLocaleString('en'), 'Selected filter') +
+    kpi('Average attendance', avgAtt, 'Selected filter');
+  if (isMgr) {
+    const nr = notReported().length;
+    html += kpi('Certificates pending', certs, 'Selected filter') +
+      `<div class="kpi"><div class="kpi-label">Not reported this week</div><div class="kpi-value">${nr}</div><div class="kpi-sub">of ${state.coordinators.length} coordinators</div></div>`;
+  } else {
+    html += kpi('Certificates pending', certs, 'Selected filter');
+  }
+  $('#live-kpis').innerHTML = html;
+}
+
+function renderNotReported() {
+  const list = notReported();
+  $('#not-reported').innerHTML = list.length
+    ? list.map((c) => {
+        const last = state.runs
+          .filter((r) => r.coordinator_name === c.coordinator_name && r.updated_by === c.user_id)
+          .map((r) => r.updated_at).sort().pop();
+        return `<li><strong>${esc(c.coordinator_name)}</strong> · ${last ? 'last update ' + esc(new Date(last).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })) : 'no updates yet'}</li>`;
+      }).join('')
+    : '<li class="ok">Every coordinator has updated a run in the last 7 days.</li>';
+}
+
+function renderChart() {
+  const rows = visibleRuns();
+  const max = Math.max(1, ...rows.map((r) => r.learners_trained || 0));
+  const isMgr = state.profile.role === 'manager';
+  $('#chart').innerHTML = rows.length
+    ? rows.map((r) => {
+        const pct = ((r.learners_trained || 0) / max * 100).toFixed(1);
+        const label = (isMgr ? r.coordinator_name + ' · ' : '') + monthLabel(r.period_month);
+        return `<div class="bar-row wide"><div class="bar-label">${esc(label)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#7FB6DE"></div></div><div class="bar-val">${esc((r.learners_trained || 0).toLocaleString('en'))} learners</div></div>`;
+      }).join('')
+    : '<div class="note">No runs match this filter.</div>';
+}
+
+function renderTable() {
+  const isMgr = state.profile.role === 'manager';
+  const rows = visibleRuns();
+  const coordOpts = state.coordinators.map((c) =>
+    `<option value="${esc(c.coordinator_name)}">${esc(c.coordinator_name)}</option>`).join('');
+  $('#runs-body').innerHTML = rows.map((r) => {
+    const att = r.attendance_rate == null ? '' : (Number(r.attendance_rate) * 100).toFixed(1);
+    const coordCell = isMgr
+      ? `<td><select data-f="coordinator_name">${coordOpts.replace(`value="${esc(r.coordinator_name)}"`, `value="${esc(r.coordinator_name)}" selected`)}</select></td>`
+      : '';
+    const runsCell = isMgr
+      ? `<td><input type="number" min="0" data-f="runs_delivered" value="${esc(r.runs_delivered)}" style="width:70px"></td>`
+      : `<td>${esc(r.runs_delivered)}</td>`;
+    const delBtn = isMgr ? `<button class="btn danger" data-act="delete" data-id="${esc(r.id)}" type="button">Delete</button>` : '';
+    return `<tr data-id="${esc(r.id)}">
+      <td>${esc(monthLabel(r.period_month))}</td>${coordCell}${runsCell}
+      <td><input type="number" min="0" data-f="learners_trained" value="${esc(r.learners_trained)}"></td>
+      <td><input type="number" min="0" max="100" step="0.1" data-f="attendance_rate" value="${esc(att)}"></td>
+      <td><input type="text" data-f="stage" value="${esc(r.stage)}"></td>
+      <td><input type="number" min="0" data-f="certificates_pending" value="${esc(r.certificates_pending)}"></td>
+      <td><input type="text" maxlength="200" data-f="note" value="${esc(r.note)}"></td>
+      <td><button class="btn" data-act="save" data-id="${esc(r.id)}" type="button">Save</button> ${delBtn}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="9">No runs match this filter.</td></tr>`;
+}
+
+function intOrNull(v, label, max = null) {
+  if (v === '' || v == null) return null;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 0 || (max != null && n > max)) throw new Error(`${label} must be a whole number${max != null ? ' from 0 to ' + max : ' of 0 or more'}.`);
+  return n;
+}
+
+async function saveRow(id) {
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  const get = (f) => tr.querySelector(`[data-f="${f}"]`);
+  try {
+    const attRaw = get('attendance_rate').value;
+    let attendance = null;
+    if (attRaw !== '') {
+      const a = Number(attRaw);
+      if (!(a >= 0 && a <= 100)) throw new Error('Attendance must be from 0 to 100.');
+      attendance = Math.round(a * 100) / 10000;
+    }
+    const changes = {
+      learners_trained: intOrNull(get('learners_trained').value, 'Learners trained'),
+      attendance_rate: attendance,
+      stage: get('stage').value.trim() || null,
+      certificates_pending: intOrNull(get('certificates_pending').value, 'Certificates pending'),
+      note: get('note').value.trim() || null,
+    };
+    if (state.profile.role === 'manager') {
+      changes.runs_delivered = intOrNull(get('runs_delivered').value, 'Runs delivered');
+      changes.coordinator_name = get('coordinator_name').value;
+    }
+    if (changes.learners_trained === null) throw new Error('Learners trained is required.');
+    if (changes.runs_delivered === null) delete changes.runs_delivered;
+    const { error } = await sb.from('runs').update(changes).eq('id', id);
+    if (error) throw new Error(error.message);
+    setStatus('Saved.', true);
+    await refresh();
+  } catch (err) {
+    setStatus(err.message);
+  }
+}
+
+async function deleteRow(id) {
+  if (!window.confirm('Delete this run? The audit log keeps a record.')) return;
+  const { error } = await sb.from('runs').delete().eq('id', id);
+  if (error) return setStatus(error.message);
+  setStatus('Deleted.', true);
+  await refresh();
+}
+
+$('#runs-body').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  if (btn.dataset.act === 'save') saveRow(btn.dataset.id);
+  if (btn.dataset.act === 'delete') deleteRow(btn.dataset.id);
+});
+
+$('#filter-month').addEventListener('change', (e) => { state.fm = e.target.value; render(); });
+$('#filter-coord').addEventListener('change', (e) => { state.fc = e.target.value; render(); });
+
+$('#add-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    const month = $('#new-month').value;
+    if (!month) throw new Error('Choose a month.');
+    const att = $('#new-att').value;
+    const row = {
+      period_month: month + '-01',
+      coordinator_name: $('#new-coord').value,
+      runs_delivered: intOrNull($('#new-runs').value, 'Runs delivered'),
+      learners_trained: intOrNull($('#new-learners').value, 'Learners trained'),
+      attendance_rate: att === '' ? null : Math.round(Number(att) * 100) / 10000,
+      note: $('#new-note').value.trim() || null,
+    };
+    const { error } = await sb.from('runs').insert(row);
+    if (error) throw new Error(error.message);
+    e.target.reset();
+    setStatus('Run added.', true);
+    await refresh();
+  } catch (err) {
+    setStatus(err.message);
+  }
+});
+</script>
+</body>
+</html>
